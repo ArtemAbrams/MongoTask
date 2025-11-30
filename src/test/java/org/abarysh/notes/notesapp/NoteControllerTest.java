@@ -6,6 +6,7 @@ import org.abarysh.notes.notesapp.api.NoteController;
 import org.abarysh.notes.notesapp.domain.dto.NoteDetailsResponse;
 import org.abarysh.notes.notesapp.domain.dto.NoteRequest;
 import org.abarysh.notes.notesapp.domain.dto.NoteSummaryResponse;
+import org.abarysh.notes.notesapp.domain.dto.NoteWordStatsResponse;
 import org.abarysh.notes.notesapp.domain.enums.NoteTag;
 import org.abarysh.notes.notesapp.exсeptions.NotFoundException;
 import org.abarysh.notes.notesapp.exсeptions.handler.GlobalExceptionHandler;
@@ -26,6 +27,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.Mockito.*;
@@ -170,16 +172,17 @@ class NoteControllerTest {
 
     @Test
     void getStats_shouldReturnStatsMap() throws Exception {
-        LinkedHashMap<String, Long> stats = new LinkedHashMap<>();
+        Map<String, Long> stats = new LinkedHashMap<>();
         stats.put("test", 2L);
         stats.put("task", 1L);
+        NoteWordStatsResponse noteWordStatsResponse = new NoteWordStatsResponse(stats);
 
-        when(noteService.getStats("123")).thenReturn(stats);
+        when(noteService.getStats("123")).thenReturn(noteWordStatsResponse);
 
         mockMvc.perform(get("/api/notes/{id}/stats", "123"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.test").value(2))
-                .andExpect(jsonPath("$.task").value(1));
+                .andExpect(jsonPath("$.wordStats.test").value(2))
+                .andExpect(jsonPath("$.wordStats.task").value(1));
     }
 
     @Test

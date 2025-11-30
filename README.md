@@ -27,8 +27,8 @@ In the project root you should have:
 Start everything with:
 
 ```bash
-docker compose build
-docker compose up
+  docker compose build
+  docker compose up
 ```
 
 After startup:
@@ -58,7 +58,7 @@ After startup:
 
    That means, if `SPRING_DATA_MONGODB_URI` is set - it will be used, otherwise the app falls back to `mongodb://localhost:27017/notesdb`.
 
-   **Linux / macOS (bash/zsh):**
+   **Linux / MacOS :**
 
    ```bash
    export SPRING_DATA_MONGODB_URI="mongodb://localhost:27017/notesdb"
@@ -85,7 +85,7 @@ After that the API will be available at: http://localhost:8080/api/notes
 Run all tests (unit, web, integration with Testcontainers):
 
 ```bash
-mvn test
+  mvn test
 ```
 
 Integration tests:
@@ -242,7 +242,8 @@ Response:
 
 **GET** `/api/notes/{id}/stats`
 
-Computes word statistics for the note text:
+Computes word statistics for the note text, counts occurrences of each unique token, ignoring case and punctuation, and returns the result sorted by frequency in
+descending order. Numeric tokens are treated as words as well, since the requirements do not specify excluding them.
 
 Example:
 
@@ -252,10 +253,12 @@ Response:
 
 ```json
 {
-  "note": 2,
-  "a": 1,
-  "is": 1,
-  "just": 1
+  "wordStats": {
+    "note": 2,
+    "a": 1,
+    "is": 1,
+    "just": 1
+  }
 }
 ```
 

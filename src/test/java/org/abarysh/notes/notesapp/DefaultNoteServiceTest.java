@@ -3,15 +3,16 @@ package org.abarysh.notes.notesapp;
 import org.abarysh.notes.notesapp.domain.dto.NoteDetailsResponse;
 import org.abarysh.notes.notesapp.domain.dto.NoteRequest;
 import org.abarysh.notes.notesapp.domain.dto.NoteSummaryResponse;
+import org.abarysh.notes.notesapp.domain.dto.NoteWordStatsResponse;
 import org.abarysh.notes.notesapp.domain.entity.Note;
 import org.abarysh.notes.notesapp.domain.enums.NoteTag;
 import org.abarysh.notes.notesapp.exсeptions.NotFoundException;
 import org.abarysh.notes.notesapp.repo.NoteRepository;
 import org.abarysh.notes.notesapp.service.impl.DefaultNoteService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
@@ -28,14 +29,10 @@ class DefaultNoteServiceTest {
     @Mock
     private NoteRepository noteRepository;
 
+    @InjectMocks
     private DefaultNoteService noteService;
 
     private static final Instant CREATED_AT = Instant.parse("2025-02-27T00:00:00Z");
-
-    @BeforeEach
-    void setUp() {
-        noteService = new DefaultNoteService(noteRepository);
-    }
 
     @Test
     void createOrUpdate_shouldCreateNewNote_whenIdIsNull() {
@@ -195,7 +192,8 @@ class DefaultNoteServiceTest {
 
         when(noteRepository.findById("1")).thenReturn(Optional.of(note));
 
-        LinkedHashMap<String, Long> stats = noteService.getStats("1");
+        NoteWordStatsResponse noteWordStatsResponse = noteService.getStats("1");
+        Map<String, Long> stats = noteWordStatsResponse.getWordStats();
 
         List<String> keys = new ArrayList<>(stats.keySet());
         assertEquals(List.of("note", "a", "is", "just"), keys);

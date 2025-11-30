@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.abarysh.notes.notesapp.domain.dto.NoteDetailsResponse;
 import org.abarysh.notes.notesapp.domain.dto.NoteRequest;
+import org.abarysh.notes.notesapp.domain.dto.NoteWordStatsResponse;
 import org.abarysh.notes.notesapp.domain.enums.NoteTag;
 import org.abarysh.notes.notesapp.exсeptions.ApiError;
 import org.abarysh.notes.notesapp.repo.NoteRepository;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +21,7 @@ import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,13 +49,6 @@ public class NotesAppIntegrationTest {
 
     private final static ObjectMapper objectMapper = new ObjectMapper();
 
-    private String baseUrl;
-
-    @BeforeEach
-    void setUp() {
-        this.baseUrl = "http://localhost:" + port + "/api/notes";
-    }
-
     @AfterEach
     void tearDown() {
         noteRepository.deleteAll();
@@ -70,7 +64,7 @@ public class NotesAppIntegrationTest {
         assertNotNull(created.getCreatedDate());
         assertEquals(Set.of(NoteTag.PERSONAL), created.getTags());
 
-        String getUrl = baseUrl + "/" + created.getId();
+        String getUrl = baseUrl() + "/" + created.getId();
         ResponseEntity<NoteDetailsResponse> getResponse = restTemplate.getForEntity(getUrl, NoteDetailsResponse.class);
 
         assertEquals(HttpStatus.OK, getResponse.getStatusCode());
@@ -87,7 +81,7 @@ public class NotesAppIntegrationTest {
     void listNotes_shouldReturnPage() throws Exception {
         createNote("First note", "First text", Set.of(NoteTag.BUSINESS));
         createNote("Second note", "Second text", Set.of(NoteTag.PERSONAL));
-        String url = baseUrl + "?page=0&size=10";
+        String url = baseUrl() + "?page=0&size=10";
 
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
@@ -112,7 +106,7 @@ public class NotesAppIntegrationTest {
         createNote("Business note", "biz text", Set.of(NoteTag.BUSINESS));
         createNote("Personal note", "pers text", Set.of(NoteTag.PERSONAL));
 
-        String url = baseUrl + "?tags=BUSINESS&page=0&size=10";
+        String url = baseUrl() + "?tags=BUSINESS&page=0&size=10";
 
         ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
@@ -132,12 +126,12 @@ public class NotesAppIntegrationTest {
     void deleteNote_shouldRemoveNote() {
         NoteDetailsResponse created = createNote("To delete", "Delete me", Set.of(NoteTag.PERSONAL));
 
-        String deleteUrl = baseUrl + "/" + created.getId();
+        String deleteUrl = baseUrl() + "/" + created.getId();
         ResponseEntity<Void> deleteResponse = restTemplate.exchange(deleteUrl, HttpMethod.DELETE, null, Void.class);
 
         assertEquals(HttpStatus.OK, deleteResponse.getStatusCode());
 
-        String getUrl = baseUrl + "/" + created.getId();
+        String getUrl = baseUrl() + "/" + created.getId();
         ResponseEntity<ApiError> getResponse = restTemplate.getForEntity(getUrl, ApiError.class);
 
         assertEquals(HttpStatus.NOT_FOUND, getResponse.getStatusCode());
@@ -149,19 +143,20 @@ public class NotesAppIntegrationTest {
     void stats_shouldReturnWordCounts() throws Exception {
         NoteDetailsResponse created = createNote("Stats note", "note is just a note", Set.of(NoteTag.PERSONAL));
 
-        String statsUrl = baseUrl + "/" + created.getId() + "/stats";
+        String statsUrl = baseUrl() + "/" + created.getId() + "/stats";
 
         ResponseEntity<String> response = restTemplate.getForEntity(statsUrl, String.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
 
-        JsonNode root = objectMapper.readTree(response.getBody());
+        NoteWordStatsResponse noteWordStatsResponse = objectMapper.readValue(response.getBody(), NoteWordStatsResponse.class);
+        Map<String, Long> stats = noteWordStatsResponse.getWordStats();
 
-        assertEquals(2, root.get("note").asInt());
-        assertEquals(1, root.get("is").asInt());
-        assertEquals(1, root.get("just").asInt());
-        assertEquals(1, root.get("a").asInt());
+        assertEquals(2, stats.get("note"));
+        assertEquals(1, stats.get("is"));
+        assertEquals(1, stats.get("just"));
+        assertEquals(1, stats.get("a"));
     }
 
     @Test
@@ -172,7 +167,7 @@ public class NotesAppIntegrationTest {
                 .tags(Set.of(NoteTag.PERSONAL))
                 .build();
 
-        ResponseEntity<ApiError> response = restTemplate.postForEntity(baseUrl, jsonEntity(request), ApiError.class);
+        ResponseEntity<ApiError> response = restTemplate.postForEntity(baseUrl(), jsonEntity(request), ApiError.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -187,7 +182,7 @@ public class NotesAppIntegrationTest {
 
     @Test
     void getById_shouldReturnNotFound_whenNoteMissing() {
-        String url = baseUrl + "/missing-id";
+        String url = baseUrl() + "/missing-id";
 
         ResponseEntity<ApiError> response = restTemplate.getForEntity(url, ApiError.class);
 
@@ -210,7 +205,7 @@ public class NotesAppIntegrationTest {
 
         HttpEntity<NoteRequest> entity = new HttpEntity<>(request, new HttpHeaders());
 
-        ResponseEntity<NoteDetailsResponse> response = restTemplate.postForEntity(baseUrl, entity, NoteDetailsResponse.class);
+        ResponseEntity<NoteDetailsResponse> response = restTemplate.postForEntity(baseUrl(), entity, NoteDetailsResponse.class);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -221,6 +216,10 @@ public class NotesAppIntegrationTest {
     private HttpEntity<NoteRequest> jsonEntity(NoteRequest request) {
         HttpHeaders headers = new HttpHeaders();
         return new HttpEntity<>(request, headers);
+    }
+
+    private String baseUrl() {
+        return "http://localhost:" + port + "/api/notes";
     }
 
 }

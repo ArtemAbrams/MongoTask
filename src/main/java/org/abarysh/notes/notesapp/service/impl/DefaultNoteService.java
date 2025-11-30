@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.abarysh.notes.notesapp.domain.dto.NoteDetailsResponse;
 import org.abarysh.notes.notesapp.domain.dto.NoteRequest;
 import org.abarysh.notes.notesapp.domain.dto.NoteSummaryResponse;
+import org.abarysh.notes.notesapp.domain.dto.NoteWordStatsResponse;
 import org.abarysh.notes.notesapp.domain.entity.Note;
 import org.abarysh.notes.notesapp.domain.enums.NoteTag;
 import org.abarysh.notes.notesapp.exсeptions.NotFoundException;
@@ -71,7 +72,7 @@ public class DefaultNoteService implements NoteService {
     }
 
     @Override
-    public LinkedHashMap<String, Long> getStats(String id) {
+    public NoteWordStatsResponse getStats(String id) {
         log.debug("Calculating stats for note id='{}'", id);
         Note note = findByIdOrThrow(id);
         String text = Optional.ofNullable(note.getText()).orElse("");
@@ -80,15 +81,12 @@ public class DefaultNoteService implements NoteService {
                 .filter(s -> !s.isBlank())
                 .map(s -> s.replaceAll("\\p{Punct}", "").toLowerCase())
                 .filter(s -> !s.isBlank())
-                .collect(Collectors.groupingBy(
-                        Function.identity(),
-                        Collectors.counting()
-                ));
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
-        return counts.entrySet()
+        Map<String, Long> sorted = counts.entrySet()
                 .stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed()
-                                .thenComparing(Map.Entry.comparingByKey())
+                        .thenComparing(Map.Entry.comparingByKey())
                 )
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
@@ -96,6 +94,8 @@ public class DefaultNoteService implements NoteService {
                         (a, b) -> a,
                         LinkedHashMap::new
                 ));
+
+        return new NoteWordStatsResponse(sorted);
     }
 
     private Note findByIdOrThrow(String id) {
